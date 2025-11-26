@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quittance de Loyer</title>
+    <style>
+        /* BASE STYLES */
+        :root {
+            --primary-color: #2c3e50;
+            --border-color: #888;
+            --bg-field: #f4f4f4;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* A4 PAGE CONTAINER */
+        .page {
+            width: 210mm;
+            height: 296mm; /* A4 Height */
+            background: white;
+            padding: 15mm 20mm;
+            box-sizing: border-box;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* CONTROLS (Hide on print) */
+        .no-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 999;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        button:hover { background: #0056b3; }
+        button.clear { background: #dc3545; }
+        button.clear:hover { background: #a71d2a; }
+
+        /* TYPOGRAPHY */
+        h1 {
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 26px; 
+            margin: 0 0 25px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+            letter-spacing: 1px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px; 
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+        }
+        
+        h3 {
+            font-size: 16px;
+        }
+
+        /* INPUT STYLING */
+        input, textarea {
+            width: 100%;
+            border: 1px solid #ccc;
+            background: var(--bg-field);
+            padding: 5px 8px;
+            font-family: inherit;
+            font-size: 15px; 
+            border-radius: 2px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: none;
+            /* SCREEN HEIGHT: 85px */
+            height: 105px; 
+        }
+
+        input:focus, textarea:focus {
+            background: #fff;
+            border-color: #007bff;
+            outline: none;
+        }
+        
+        textarea#bailleur-address, 
+	textarea#locataire-address {
+	    font-size: 17px !important; /* Change this value for desired size */
+	    font-weight: bold;
+	    padding: 10px !important; /* Adjust '10px' to increase or decrease the spacing */
+	}
+        
+        /* Address input field height increase */
+        #main-address-input {
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        /* LAYOUT GRIDS */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .section-box {
+            border: 1px solid black; 
+            padding: 10px; 
+            border-radius: 0; 
+        }
+
+        .period-row {
+            display: flex;
+            align-items: center;
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .period-row span {
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .period-row input {
+            width: 140px;
+            margin-right: 20px;
+            background: white;
+        }
+
+        /* FINANCIAL TABLE */
+        .financial-section {
+            margin-bottom: 20px;
+        }
+        
+        .financial-section table,
+        .financial-section table td {
+            border: 1px solid black;
+        }
+        
+        .financial-section table {
+            width: 100%;
+            border-collapse: collapse; 
+            margin-top: 5px;
+        }
+
+        td {
+            padding: 6px 0;
+            vertical-align: middle;
+        }
+
+        td.label-col {
+            text-align: right;
+            padding-right: 15px;
+            width: 70%;
+            font-size: 14px; 
+        }
+
+        td.input-col {
+            width: 30%;
+            /* FIX: Increased padding-left for better Total field separation */
+            padding-left: 15px; 
+            padding-right: 5px; 
+        }
+
+        .money-input {
+            text-align: right;
+            font-weight: bold;
+            width: 120px;
+            display: inline-block;
+        }
+
+        .total-row td {
+            font-size: 16px; 
+            padding-top: 6px;
+            font-weight: bold;
+        }
+
+        /* SIGNATURE AREA */
+        .signature-section {
+            margin-top: auto; 
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .sig-details {
+            width: 40%;
+        }
+
+        .sig-pad-container {
+            width: 50%;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px dashed #999;
+            background: #fff;
+            cursor: crosshair;
+            margin-top: 5px;
+        }
+
+        /* FOOTER LEGAL */
+        .legal-footer {
+            margin-top: 20px;
+            font-size: 10px; 
+            color: #777;
+            text-align: justify;
+            line-height: 1.3;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+	    .screen-only-text {
+	        text-align: center; 
+	    }
+
+        /* PRINT MEDIA QUERY */
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+            .page {
+                box-shadow: none;
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                padding: 0; 
+            }
+            .no-print {
+                display: none;
+            }
+            /* Visual cleanup for print */
+            input, textarea {
+                border: 1px solid black !important; 
+                background: transparent;
+                padding: 3px;
+            }
+            /* Ensure print height is large enough */
+            textarea {
+                height: 105px !important; 
+            }
+            /* Ensure print padding is large enough */
+            #main-address-input {
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+            }
+             td.input-col {
+                padding-left: 15px !important; 
+            }
+            .section-box, .period-row {
+                border: 1px solid #000; 
+                background: none;
+            }
+            canvas {
+                border: none; 
+            }
+            /* Hide placeholders */
+            ::placeholder {
+                color: transparent;
+            }
+            .screen-only-text { 
+	        display: none; 
+            }
+        }
+        
+	/* NEW RULE: Container for the received sum sentence */
+	.received-sum-sentence {
+	    display: flex; /* Aligns all children (text, inputs) in one row */
+	    align-items: center;
+	    font-size: 16px;
+	    font-weight: bold;
+	    /* CHANGE: Adds significant space above this section for separation */
+	    margin-top: 15px; 
+	    margin-bottom: 5px; /* Keeps space tight before the next heading */
+	}
+
+	/* Style the 'Le' label separately to push it slightly left */
+	.received-sum-sentence .le-label {
+	    margin-left: 10px; /* Space between "euros" and "Le :" */
+	    margin-right: 10px;
+	}
+	
+	/* NEW RULE: Add space after "Reçu la somme de :" text */
+	.received-sum-sentence > span:first-child {
+	    margin-right: 10px; /* Increase '15px' for more space, decrease for less */
+	}
+	
+	/* Style the inputs within the sentence to look clean */
+	.received-sum-sentence input {
+	    /* Override generic input width which is 100% */
+	    width: auto; 
+	    padding: 5px 8px;
+	    font-size: 15px; 
+	    font-weight: bold;
+	}
+
+
+	/* Ensure the total input is constrained */
+	#received-amount {
+	    width: 100px; /* Fixed width for the amount */
+	    text-align: right;
+	    margin-right: 5px; /* Space before the word 'euros' */
+	}
+        
+        /* START MOBILE FRIENDLY CSS FOR EDITING */
+	@media screen and (max-width: 768px) {
+	    /* 1. Main container fix: remove fixed A4 size and use full width */
+	    .page {
+		width: 100%; /* Allows page to take full mobile width */
+		min-height: 100vh;
+		padding: 10px; /* Reduce padding for small screens */
+		box-shadow: none;
+	    }
+	    
+	    /* 2. Grid stack: make two-column layouts vertical */
+	    .grid-2 {
+		grid-template-columns: 1fr;
+		gap: 15px; /* Reduce gap */
+	    }
+	    
+	    /* 3. Period row stack: stack dates vertically */
+	    .period-row {
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 8px;
+	    }
+	    .period-row input {
+		width: 100%; 
+		margin-right: 0;
+		margin-bottom: 10px;
+	    }
+	    .period-row span {
+		margin-bottom: 5px;
+	    }
+	    
+	    /* MOBILE FIX: Ensure sentence stacks on small screens */
+	    .received-sum-sentence {
+		flex-direction: column; /* Stack the parts vertically on mobile */
+		align-items: flex-start;
+	    }
+	    .received-sum-sentence input {
+		width: 100%; /* Make inputs full width on mobile */
+		margin-top: 5px;
+		margin-bottom: 10px;
+	    }
+	    /* FIX 2: Override 100% width on the received amount input (which caused 'euros.' to wrap) */
+	    .received-sum-sentence input#received-amount {
+		width: 100px !important; /* Forces the amount input to remain its small, fixed size */
+		flex-shrink: 0; /* Prevents the browser from shrinking it further */
+	    }
+	    .received-sum-sentence .le-label {
+		margin-left: 0;
+		margin-top: 10px;
+	    }
+	    
+	    /* FIX 1: Prevent currency symbol from wrapping below the input box in the table */
+	    td.input-col {
+		white-space: nowrap; 
+	    }
+	    /* ADD THIS NEW RULE */
+	    .currency-group {
+		white-space: nowrap;
+	    }
+
+	    /* 4. Signature stack: make side-by-side items stack vertically */
+	    .signature-section {
+		flex-direction: column;
+		align-items: center;
+		margin-top: 30px;
+	    }
+	    .sig-details, .sig-pad-container {
+		width: 100%;
+		margin-bottom: 20px;
+		text-align: left;
+	    }
+	    canvas {
+		width: 100%; /* Make signature pad responsive to container width */
+		max-width: 300px;
+		height: 150px; /* Increase height for easier mobile drawing */
+		box-sizing: border-box;
+	    }
+	    
+	    /* 5. Controls fix: keep controls visible on mobile */
+	    .no-print {
+		top: auto;
+		bottom: 10px;
+		right: 10px;
+		flex-direction: row; /* Display buttons side-by-side at the bottom */
+		width: 90%;
+		justify-content: space-around;
+		gap: 5px;
+	    }
+	    .no-print button {
+		flex-grow: 1; /* Make buttons expand to fill width */
+	    }
+	}
+	/* END MOBILE FRIENDLY CSS FOR EDITING */
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()">🖨️ Imprimer / PDF</button>
+        <button class="clear" onclick="clearAllFields()">❌ Effacer tous les champs</button>
+    </div>
+
+    <div class="page">
+        <h1>Quittance de Loyer</h1> 
+        <div class="grid-2">
+            <div class="section-box">
+                <label>Le bailleur (ou son mandataire)</label> 
+                <textarea id="bailleur-address" rows="3" placeholder="Nom, Prénom&#10;Adresse complète&#10;Code Postal, Ville"></textarea>
+            </div>
+            <div class="section-box">
+                <label>Le(s) locataire(s)</label> 
+                <textarea id="locataire-address" rows="3" placeholder="Nom, Prénom&#10;Adresse actuelle (si différente)"></textarea>
+            </div>
+        </div>
+
+        <div class="period-row">
+            <span>Loyer du :</span> 
+            <input type="date" id="date-from">
+            <span>Au :</span> 
+            <input type="date" id="date-to">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label>Pour loyer et accessoires des locaux sis (Adresse du logement) :</label> 
+            <input type="text" id="main-address-input" style="border-bottom: 1px solid #ccc; border-radius: 0;" placeholder="Adresse du bien loué">
+        </div>
+        
+	<div class="received-sum-sentence">
+	    <span>Reçu la somme de : </span>
+	    <span class="currency-group">
+                <input type="text" id="received-amount" class="money-input received-input" readonly value="0.00">€
+            </span>
+	    <span class="le-label">Le : </span>
+	    <input type="date" id="received-date" class="received-input">
+	</div>
+
+        <div class="financial-section">
+            <h3>Détail du règlement :</h3> 
+            <table>
+                <tr>
+                    <td class="label-col">Loyer hors charges :</td> 
+                    <td class="input-col"><input type="number" id="rent" class="money-input" step="0.01" oninput="calc()" placeholder="0.00"> €</td> 
+                </tr>
+                <tr>
+                    <td class="label-col">Charges (Provisions) :</td> 
+                    <td class="input-col"><input type="number" id="charges" class="money-input" step="0.01" oninput="calc()" placeholder="0.00"> €</td> 
+                </tr>
+                <tr>
+                    <td class="label-col">Autre (Régularisation, etc.) :</td> 
+                    <td class="input-col"><input type="number" id="other" class="money-input" step="0.01" oninput="calc()" placeholder="0.00"> €</td> 
+                </tr>
+                <tr class="total-row">
+                    <td class="label-col">TOTAL :</td> 
+                    <td class="input-col"><input type="text" id="total" class="money-input" readonly value="0.00"> €</td> 
+                </tr>
+                <tr>
+                    <td class="label-col" style="padding-top:15px; font-style: italic; color:#666;">Dont paiement CAF (AL) :</td> 
+                    <td class="input-col" style="padding-top:15px;"><input type="number" id="caf-payment" class="money-input" step="0.01" placeholder="0.00"> €</td> 
+                </tr>
+            </table>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label>Commentaires :</label> 
+            <input type="text" id="comments" style="border-bottom: 1px dotted #ccc;">
+        </div>
+
+        <div class="signature-section">
+            <div class="sig-details">
+                <label>Fait à :</label> 
+                <input type="text" id="city" placeholder="Ville">
+                <br><br>
+                <label>Le :</label> 
+                <input type="date" id="document-date">
+            </div>
+            
+            <div class="sig-pad-container">
+                <label>Signature du bailleur :</label>
+                <div style="font-size: 10px; color: #999; margin-bottom: 5px;" class="screen-only-text">(Dessinez avec la souris ou le doigt)</div>
+                <canvas id="sig-canvas" width="300" height="100"></canvas>
+            </div>
+        </div>
+
+        <div class="legal-footer">
+            <p>Le paiement de la présente n'emporte pas présomption de paiement des termes antérieurs. 
+            Cette quittance ou ce reçu annule tous les reçus qui auraient pu être donnés pour acompte versé sur le présent terme. 
+            En cas de congé précédemment donné, cette quittance ou ce reçu représenterait l'indemnité d'occupation et ne saurait être considéré comme un titre d'occupation. 
+            Sous réserve d'encaissement (pour les chèques).</p>
+        </div>
+    </div>
+
+    <script>
+        // MODIFIED: List of all fields to save/load. Dates are now excluded.
+        const SAVABLE_FIELDS = [
+            'bailleur-address', 'locataire-address', 
+            'main-address-input', 'rent', 'charges', 'other',
+            'caf-payment', 'comments', 'city' 
+            // date-from, date-to, and document-date are excluded.
+        ];
+
+        /* --- CORE FUNCTIONS --- */
+        function saveAllFields() {
+            SAVABLE_FIELDS.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    localStorage.setItem(`quittance_field_${id}`, element.value);
+                }
+            });
+        }
+
+        function loadAllFields() {
+            SAVABLE_FIELDS.forEach(id => {
+                const element = document.getElementById(id);
+                const savedValue = localStorage.getItem(`quittance_field_${id}`);
+                if (element && savedValue !== null) {
+                    element.value = savedValue;
+                }
+            });
+            // Calculate total after loading numerical values
+            calc(); 
+            loadSignature(); // Also load the signature
+        }
+        
+        function clearAllFields() {
+            // 1. Clear savable text/number fields (excluding dates)
+            SAVABLE_FIELDS.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = '';
+                    localStorage.removeItem(`quittance_field_${id}`);
+                }
+            });
+
+            // 2. Clear Total field explicitly and reset calculation
+            document.getElementById('total').value = '0.00';
+            
+            // 3. Clear Signature (canvas and local storage)
+            const canvas = document.getElementById('sig-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            localStorage.removeItem('quittance_signature'); 
+        }
+
+        /* --- AUTO CALCULATION --- */
+        function calc() {
+            // Ensures total is formatted to 2 decimals, even if 0.00
+            const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+            const total = getVal('rent') + getVal('charges') + getVal('other');
+            const formattedTotal = total.toFixed(2);
+            document.getElementById('total').value = formattedTotal;
+            
+            // NEW: Update the received amount field with the total
+            document.getElementById('received-amount').value = formattedTotal;
+        }
+
+        /* --- SIGNATURE LOGIC (with persistence) --- */
+        const canvas = document.getElementById('sig-canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        // Settings
+        ctx.strokeStyle = "#000"; 
+        ctx.lineWidth = 2;
+
+        // --- Function to save the signature to local storage ---
+        function saveSignature() {
+            const dataURL = canvas.toDataURL();
+            localStorage.setItem('quittance_signature', dataURL);
+        }
+        
+        // --- Function to load the signature from local storage ---
+        function loadSignature() {
+            const savedDataURL = localStorage.getItem('quittance_signature');
+            if (savedDataURL) {
+                const img = new Image();
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = savedDataURL;
+            }
+        }
+        
+        // Mouse Events
+        canvas.addEventListener('mousedown', (e) => { 
+            drawing = true; 
+            ctx.beginPath(); 
+            ctx.moveTo(e.offsetX, e.offsetY); 
+        });
+        
+        canvas.addEventListener('mousemove', (e) => { 
+            if(drawing) { 
+                ctx.lineTo(e.offsetX, e.offsetY); 
+                ctx.stroke(); 
+            } 
+        });
+        
+        // Save signature when the user lifts the mouse
+        canvas.addEventListener('mouseup', () => { 
+            drawing = false; 
+            saveSignature(); 
+        });
+        canvas.addEventListener('mouseout', () => { drawing = false; });
+
+        // Touch Events (Mobile)
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            drawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if(drawing) {
+                const rect = canvas.getBoundingClientRect();
+                ctx.lineTo(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+                ctx.stroke();
+            }
+        });
+        
+        // Save signature when the user stops touching
+        canvas.addEventListener('touchend', () => { 
+            drawing = false; 
+            saveSignature(); 
+        });
+        
+        // --- Global Event Listeners ---
+        window.addEventListener('load', loadAllFields);
+
+        // Continuous saving on any user input in any of the savable fields
+        document.addEventListener('input', (e) => {
+            if (SAVABLE_FIELDS.includes(e.target.id)) {
+                saveAllFields();
+            }
+        });
+        // Catch 'change' events for things like dates where 'input' might not fire
+        document.addEventListener('change', (e) => {
+            if (SAVABLE_FIELDS.includes(e.target.id)) {
+                saveAllFields();
+            }
+        });
+    </script>
+</body>
+</html>
